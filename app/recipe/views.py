@@ -49,9 +49,24 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
     queryset = Recipe.objects.all()
 
+    def _params_to_ints(self, qs):
+        '''To convert a list of string Ids to Integer'''
+        return [int(str_id) for str_id in qs.split(',')]
+
     def get_queryset(self):
         '''Retrive the recipes for the authenticated user'''
-        return self.queryset.filter(user=self.request.user)
+
+        tags = self.request.query_params.get('tags')
+        ingredients = self.request.query_params.get('ingredients')
+        queryset = self.queryset
+        if tags:
+            tags_id = self._params_to_ints(tags)
+            queryset = queryset.filter(tags__id__in=tags_id)
+        if ingredients:
+            ingredients_id = self._params_to_ints(ingredients)
+            queryset = queryset.filter(ingredients__id__in=ingredients_id)
+
+        return queryset.filter(user=self.request.user)
 
     def get_serializer_class(self):
         '''Return appropriate serializer class'''

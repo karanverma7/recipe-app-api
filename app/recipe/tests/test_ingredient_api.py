@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
-from core.models import Ingredient
+from core.models import Ingredient, Recipe
 from recipe.serializers import IngredientSerializer
 
 
@@ -76,3 +76,35 @@ class PrivateIngredientAPITest(TestCase):
         payload = {'name': ''}
         res = self.client.post(INGREDIENT_URL, payload)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_ingredients_assigned_unique(self):
+        '''Test filtering ingredients by assigned returns unique items'''
+
+        ingredient1 = Ingredient.objects.create(
+            user=self.user,
+            name='Lemon'
+        )
+        ingredient2 = Ingredient.objects.create(
+            user=self.user,
+            name='Milk'
+        )
+        recipe1 = Recipe.objects.create(
+            user=self.user,
+            title='Lemon rice',
+            time_minutes=20,
+            price=50.00
+        )
+        recipe2 = Recipe.objects.create(
+            user=self.user,
+            title='Lemonade',
+            time_minutes=20,
+            price=50.00
+        )
+        recipe1.ingredients.add(ingredient1)
+        recipe2.ingredients.add(ingredient1)
+        serializer1 = IngredientSerializer(ingredient1)
+        serializer2 = IngredientSerializer(ingredient2)
+        res = self.client.get(INGREDIENT_URL, {'assigned_only': 1})
+        self.assertEqual(len(res.data), 1)
+        self.assertIn(serializer1.data, res.data)
+        self.assertNotIn(serializer2.data, res.data)
